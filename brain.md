@@ -111,3 +111,33 @@ The initial prototype was tested inside the VS Code integrated browser environme
 6. Add a Browser Environment section and keep raw User-Agent as an expandable/raw value.
 7. Add a fingerprint-signal section with clear privacy explanations.
 8. Add a manual Rescan action.
+
+## Phase 1.2 — Server-side IP Detection
+### 2026-08-11
+
+### Implementation
+- Added a Node.js HTTP server.
+- Moved frontend files into the `public/` directory.
+- Added `/api/ip` endpoint for server-side client IP detection.
+- IP information is returned to the browser without persistent storage.
+- Added localhost detection for development environments.
+- Localhost addresses such as `::1` and `127.0.0.1` are not presented as public IP addresses.
+- Added `Cache-Control: no-store` to the IP endpoint response.
+
+### Security Decisions
+- The server does not intentionally store IP addresses.
+- `X-Forwarded-For` is not blindly trusted.
+- Direct socket address is used during the current development setup.
+- Production reverse-proxy configuration will require explicit trusted-proxy handling.
+- Path traversal protection was added to static file serving.
+
+### Test Result
+- Local Node.js server starts successfully.
+- `/api/ip` responds successfully.
+- Localhost requests are correctly identified.
+- Public IP is not falsely displayed during local testing.
+- Frontend successfully communicates with the backend.
+
+### Known Limitation
+- A local development server cannot determine the user's public Internet IP from the localhost socket.
+- Public IP detection must be tested after deploying the application to an Internet-accessible server.
