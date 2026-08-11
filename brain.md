@@ -141,3 +141,53 @@ The initial prototype was tested inside the VS Code integrated browser environme
 ### Known Limitation
 - A local development server cannot determine the user's public Internet IP from the localhost socket.
 - Public IP detection must be tested after deploying the application to an Internet-accessible server.
+
+## Phase 1.3 — Authentication & Telegram Diagnostic Reporting
+### 2026-08-11
+
+### Implementation
+- Added server-side environment configuration using `.env`.
+- Added `dotenv` dependency.
+- Added private website password authentication.
+- Added server-side session handling using HTTP-only cookies.
+- Added `/api/auth` authentication status endpoint.
+- Added `/api/login` login endpoint.
+- Protected `/api/ip` behind authentication.
+- Added `/api/report` endpoint for authenticated diagnostic reports.
+- Added Telegram Bot API integration on the server.
+- Telegram Bot Token and Chat ID remain server-side and are never exposed to the browser.
+- Added client-side structured diagnostic report collection.
+- Added automatic diagnostic report submission after a completed scan.
+- Reports include browser/device information, display information, network estimates, battery state, GPU/WebGL information, and permission states.
+
+### Privacy & Security Decisions
+- `.env` is excluded from Git using `.gitignore`.
+- Bot credentials are never included in frontend JavaScript.
+- Website password is handled server-side.
+- Authentication uses an HTTP-only session cookie.
+- Diagnostic reports are only submitted after successful authentication.
+- The application does not intentionally persist diagnostic reports.
+- Localhost IP (`::1` / `127.0.0.1`) is identified as local during development.
+- Public IP detection will be validated after deployment.
+- Camera, microphone, geolocation and notification permissions are currently only queried; they are not silently requested.
+
+### Current Telegram Report
+- Telegram reporting has been tested successfully.
+- A complete diagnostic report was received in the configured Telegram chat.
+- Local testing correctly reports the server-side connection as `Localhost`.
+- Battery percentage and GPU information are being reported successfully.
+
+### Known Limitations / Next Phase
+- Public IP must be tested on an Internet-accessible deployment.
+- Reverse-proxy handling needs to be reviewed before production deployment.
+- Explicit permission controls will be added for geolocation, camera, microphone and notifications.
+- Camera capture will require an explicit user action.
+- If a photo is sent to Telegram, the user will explicitly initiate the capture/send action.
+- Future permission/camera functionality must not silently capture or transmit data.
+
+### Validation
+- Incorrect website password is rejected.
+- Correct website password opens the diagnostic scanner.
+- Scanner completes successfully after authentication.
+- Telegram diagnostic report is successfully delivered.
+- Working tree was tested locally before committing.
