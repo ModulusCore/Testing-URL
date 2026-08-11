@@ -191,3 +191,36 @@ The initial prototype was tested inside the VS Code integrated browser environme
 - Scanner completes successfully after authentication.
 - Telegram diagnostic report is successfully delivered.
 - Working tree was tested locally before committing.
+
+## 2026-08-11 — Telegram Diagnostic Reporting
+
+### Changes
+- Added authenticated website access using `SITE_PASSWORD`.
+- Kept Telegram credentials server-side in `.env`.
+- Added server-side IP detection.
+- Added browser diagnostic collection for device, browser, display, network, battery, graphics, permissions, and fingerprint signals.
+- Added explicit permission requests for supported browser APIs.
+- Added camera preview and explicit photo capture.
+- Added `/api/photo-report` endpoint.
+- Added Telegram Bot API integration for sending the captured photo with the diagnostic report.
+- Added server-side debugging logs for Telegram photo delivery.
+- Confirmed direct Telegram Bot API connectivity successfully.
+- Confirmed website diagnostic photo/report delivery successfully.
+
+### Problems
+- `server.js` initially used CommonJS while `package.json` declared `"type": "module"`.
+- Express 5 rejected the `app.get("*")` wildcard route.
+- Server initially expected `PASSWORD` and `CHAT_ID`, while `.env` uses `SITE_PASSWORD` and `TELEGRAM_CHAT_ID`.
+- Temporary `test-telegram.js` was created to verify Telegram connectivity.
+
+### Solutions
+- Removed the CommonJS/ES module mismatch by using the existing project module configuration.
+- Replaced the incompatible Express wildcard route with a catch-all middleware.
+- Updated server environment-variable mapping to match `.env`.
+- Verified Telegram connectivity independently before debugging the website reporting flow.
+- Removed the temporary Telegram test file after verification.
+
+### Security Notes
+- Telegram bot token, chat ID, site password, and session secret must remain in `.env`.
+- Secrets must never be committed to Git or written into `brain.md`.
+- Photo transmission occurs only after explicit user interaction.

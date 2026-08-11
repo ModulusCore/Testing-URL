@@ -2,107 +2,544 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="A local browser and device information tester.">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <meta
+        name="description"
+        content="A browser and device information diagnostic tester."
+    >
     <title>Device Information</title>
+
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <main class="container">
-        <div id="login-screen" class="login-screen">
-    <div class="login-box">
-        <h1>Private Testing</h1>
-        <p>Enter the testing password to continue.</p>
 
-        <form id="login-form">
-            <label for="password">Password</label>
+<main class="container">
 
-            <input
-                id="password"
-                name="password"
-                type="password"
-                autocomplete="current-password"
-                placeholder="Enter password"
-                required
-            >
+    <!-- =========================
+         LOGIN
+    ========================== -->
 
-            <button type="submit">Continue</button>
+    <div
+        id="login-screen"
+        class="login-screen"
+    >
+        <div class="login-box">
 
-            <p id="login-error" class="login-error"></p>
-        </form>
+            <h1>Private Testing</h1>
+
+            <p>
+                Enter the testing password to continue.
+            </p>
+
+            <form id="login-form">
+
+                <label for="password">
+                    Password
+                </label>
+
+                <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="Enter password"
+                    required
+                >
+
+                <button type="submit">
+                    Continue
+                </button>
+
+                <p
+                    id="login-error"
+                    class="login-error"
+                ></p>
+
+            </form>
+
+        </div>
     </div>
-</div>
 
-<div id="app" hidden>
 
-        <header class="header">
-            <div>
-                <h1>Device Information</h1>
-                <p>See what information your browser exposes to this page.</p>
+    <!-- =========================
+         APPLICATION
+    ========================== -->
+
+    <div
+        id="app"
+        hidden
+    >
+
+        <!-- =========================
+             START TEST SCREEN
+        ========================== -->
+
+        <div
+            id="start-test-screen"
+            class="start-test-screen"
+        >
+
+            <div class="start-test-box">
+
+                <h2>
+                    Ready to test your device?
+                </h2>
+
+                <p>
+                    This diagnostic test can request access
+                    to supported browser capabilities such as
+                    location, camera, microphone and
+                    notifications.
+                </p>
+
+                <p>
+                    Your browser will show its own permission
+                    prompts, and you can choose Allow or Deny.
+                </p>
+
+                <button
+                    id="start-test-btn"
+                    type="button"
+                >
+                    Start Device Test
+                </button>
+
+                <p
+                    id="start-test-status"
+                    class="start-test-status"
+                ></p>
+
             </div>
 
-            <button id="rescan" type="button">Rescan</button>
-        </header>
-
-        <div id="status" class="status">
-            Collecting information...
         </div>
 
-        <section class="section">
-            <h2>Device</h2>
-            <div id="device" class="info-grid"></div>
-        </section>
 
-        <section class="section">
-            <h2>Browser</h2>
-            <div id="browser" class="info-grid"></div>
-        </section>
+        <!-- =========================
+             SCANNER
+        ========================== -->
 
-        <section class="section">
-            <h2>Browser Environment</h2>
-            <div id="environment" class="info-grid"></div>
-        </section>
+        <div
+            id="scanner-content"
+            hidden
+        >
 
-        <section class="section">
-            <h2>Display</h2>
-            <div id="display" class="info-grid"></div>
-        </section>
+            <!-- HEADER -->
 
-        <section class="section">
-            <h2>Network</h2>
-            <div id="network" class="info-grid"></div>
-        </section>
+            <header class="header">
 
-        <section class="section">
-            <h2>Battery</h2>
-            <div id="battery" class="info-grid"></div>
-        </section>
+                <div>
 
-        <section class="section">
-            <h2>Graphics</h2>
-            <div id="graphics" class="info-grid"></div>
-        </section>
+                    <h1>
+                        Device Information
+                    </h1>
 
-        <section class="section">
-            <h2>Permissions & APIs</h2>
-            <div id="permissions" class="info-grid"></div>
-        </section>
+                    <p>
+                        See what information your browser
+                        exposes to this page.
+                    </p>
 
-        <section class="section">
-            <h2>Fingerprint Signals</h2>
-            <div id="fingerprint" class="info-grid"></div>
-        </section>
+                </div>
 
-        <footer>
-            <p>
-                This tool displays information exposed by your browser.
-                It does not intentionally upload, store, or transmit the collected information.
-            </p>
-            <div>
-        </footer>
-    </main>
+                <button
+                    id="rescan"
+                    type="button"
+                >
+                    Rescan
+                </button>
 
-    <script src="script.js"></script>
+            </header>
+
+
+            <!-- STATUS -->
+
+            <div
+                id="status"
+                class="status"
+            >
+                Collecting information...
+            </div>
+
+
+            <!-- DEVICE -->
+
+            <section class="section">
+
+                <h2>
+                    Device
+                </h2>
+
+                <div
+                    id="device"
+                    class="info-grid"
+                ></div>
+
+            </section>
+
+
+            <!-- BROWSER -->
+
+            <section class="section">
+
+                <h2>
+                    Browser
+                </h2>
+
+                <div
+                    id="browser"
+                    class="info-grid"
+                ></div>
+
+            </section>
+
+
+            <!-- ENVIRONMENT -->
+
+            <section class="section">
+
+                <h2>
+                    Browser Environment
+                </h2>
+
+                <div
+                    id="environment"
+                    class="info-grid"
+                ></div>
+
+            </section>
+
+
+            <!-- DISPLAY -->
+
+            <section class="section">
+
+                <h2>
+                    Display
+                </h2>
+
+                <div
+                    id="display"
+                    class="info-grid"
+                ></div>
+
+            </section>
+
+
+            <!-- NETWORK -->
+
+            <section class="section">
+
+                <h2>
+                    Network
+                </h2>
+
+                <div
+                    id="network"
+                    class="info-grid"
+                ></div>
+
+            </section>
+
+
+            <!-- BATTERY -->
+
+            <section class="section">
+
+                <h2>
+                    Battery
+                </h2>
+
+                <div
+                    id="battery"
+                    class="info-grid"
+                ></div>
+
+            </section>
+
+
+            <!-- GRAPHICS -->
+
+            <section class="section">
+
+                <h2>
+                    Graphics
+                </h2>
+
+                <div
+                    id="graphics"
+                    class="info-grid"
+                ></div>
+
+            </section>
+
+
+            <!-- PERMISSIONS -->
+
+            <section class="section">
+
+                <h2>
+                    Permissions & APIs
+                </h2>
+
+
+                <div
+                    class="permission-actions"
+                >
+
+                    <!-- LOCATION -->
+
+                    <div
+                        class="permission-action"
+                    >
+
+                        <div>
+
+                            <strong>
+                                📍 Location
+                            </strong>
+
+                            <span
+                                id="location-status"
+                            >
+                                Not requested
+                            </span>
+
+                        </div>
+
+                        <button
+                            id="location-btn"
+                            type="button"
+                        >
+                            Allow Location
+                        </button>
+
+                    </div>
+
+
+                    <!-- CAMERA -->
+
+                    <div
+                        class="permission-action"
+                    >
+
+                        <div>
+
+                            <strong>
+                                📷 Camera
+                            </strong>
+
+                            <span
+                                id="camera-status"
+                            >
+                                Not requested
+                            </span>
+
+                        </div>
+
+                        <button
+                            id="camera-btn"
+                            type="button"
+                        >
+                            Allow Camera
+                        </button>
+
+                    </div>
+
+
+                    <!-- MICROPHONE -->
+
+                    <div
+                        class="permission-action"
+                    >
+
+                        <div>
+
+                            <strong>
+                                🎤 Microphone
+                            </strong>
+
+                            <span
+                                id="microphone-status"
+                            >
+                                Not requested
+                            </span>
+
+                        </div>
+
+                        <button
+                            id="microphone-btn"
+                            type="button"
+                        >
+                            Allow Microphone
+                        </button>
+
+                    </div>
+
+
+                    <!-- NOTIFICATIONS -->
+
+                    <div
+                        class="permission-action"
+                    >
+
+                        <div>
+
+                            <strong>
+                                🔔 Notifications
+                            </strong>
+
+                            <span
+                                id="notification-status"
+                            >
+                                Not requested
+                            </span>
+
+                        </div>
+
+                        <button
+                            id="notification-btn"
+                            type="button"
+                        >
+                            Allow Notifications
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PERMISSION API RESULTS -->
+
+                <div
+                    id="permissions"
+                    class="info-grid"
+                ></div>
+
+
+                <!-- =========================
+                     CAMERA TEST
+                ========================== -->
+
+                <div
+                    id="camera-panel"
+                    class="camera-panel"
+                    hidden
+                >
+
+                    <h3>
+                        Camera Test
+                    </h3>
+
+                    <p>
+                        Camera preview is shown only after
+                        camera permission is granted.
+                    </p>
+
+
+                    <video
+                        id="camera-preview"
+                        autoplay
+                        playsinline
+                        muted
+                    ></video>
+
+
+                    <canvas
+                        id="camera-canvas"
+                        hidden
+                    ></canvas>
+
+
+                    <div
+                        class="camera-actions"
+                    >
+
+                        <button
+                            id="capture-btn"
+                            type="button"
+                        >
+                            Capture Photo
+                        </button>
+
+
+                        <button
+                            id="stop-camera-btn"
+                            type="button"
+                        >
+                            Stop Camera
+                        </button>
+
+                    </div>
+
+
+                    <!-- PHOTO PREVIEW -->
+
+                    <img
+                        id="photo-preview"
+                        alt="Captured photo preview"
+                        hidden
+                    >
+
+
+                    <!-- EXPLICIT SEND -->
+
+                    <button
+                        id="send-photo-btn"
+                        type="button"
+                        hidden
+                    >
+                        Capture & Send Diagnostic Report
+                    </button>
+
+
+                    <p
+                        id="camera-message"
+                    ></p>
+
+                </div>
+
+            </section>
+
+
+            <!-- FINGERPRINT -->
+
+            <section class="section">
+
+                <h2>
+                    Fingerprint Signals
+                </h2>
+
+                <div
+                    id="fingerprint"
+                    class="info-grid"
+                ></div>
+
+            </section>
+
+
+            <!-- FOOTER -->
+
+            <footer>
+
+                <p>
+                    This tool displays information exposed
+                    by your browser. Permission-based features
+                    require explicit user approval.
+                </p>
+
+            </footer>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+<script src="script.js"></script>
+
 </body>
 </html>

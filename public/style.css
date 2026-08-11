@@ -225,3 +225,58 @@ footer {
     margin: 10px 0 0 !important;
     color: #b42318 !important;
 }
+
+.permission-actions {
+    display: grid;
+    gap: 10px;
+}
+
+.permission-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.permission-action > div {
+    display: grid;
+    gap: 4px;
+}
+
+.permission-action span {
+    font-size: 13px;
+    color: #777;
+}
+
+.camera-panel {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+#camera-preview,
+#photo-preview {
+    display: block;
+    width: 100%;
+    max-width: 640px;
+    border-radius: 8px;
+    background: #111;
+}
+
+.camera-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+#send-photo-btn {
+    margin-top: 12px;
+}
+
+#camera-message {
+    font-size: 13px;
+    color: #666;
+}
