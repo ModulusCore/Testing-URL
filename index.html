@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A local browser and device information tester.">
+    <title>Device Information</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="container">
+        <header class="header">
+            <div>
+                <h1>Device Information</h1>
+                <p>See what information your browser exposes to this page.</p>
+            </div>
+
+            <button id="rescan" type="button">Rescan</button>
+        </header>
+
+        <div id="status" class="status">
+            Collecting information...
+        </div>
+
+        <section class="section">
+            <h2>Device</h2>
+            <div id="device" class="info-grid"></div>
+        </section>
+
+        <section class="section">
+            <h2>Browser</h2>
+            <div id="browser" class="info-grid"></div>
+        </section>
+
+        <section class="section">
+            <h2>Browser Environment</h2>
+            <div id="environment" class="info-grid"></div>
+        </section>
+
+        <section class="section">
+            <h2>Display</h2>
+            <div id="display" class="info-grid"></div>
+        </section>
+
+        <section class="section">
+            <h2>Network</h2>
+            <div id="network" class="info-grid"></div>
+        </section>
+
+        <section class="section">
+            <h2>Battery</h2>
+            <div id="battery" class="info-grid"></div>
+        </section>
+
+        <section class="section">
+            <h2>Graphics</h2>
+            <div id="graphics" class="info-grid"></div>
+        </section>
+
+        <section class="section">
+            <h2>Permissions & APIs</h2>
+            <div id="permissions" class="info-grid"></div>
+        </section>
+
+        <section class="section">
+            <h2>Fingerprint Signals</h2>
+            <div id="fingerprint" class="info-grid"></div>
+        </section>
+
+        <footer>
+            <p>
+                This tool displays information exposed by your browser.
+                It does not intentionally upload, store, or transmit the collected information.
+            </p>
+        </footer>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
