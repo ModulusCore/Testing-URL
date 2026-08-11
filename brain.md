@@ -1,4 +1,4 @@
-# Testing-URL — Project Brain
+# Testing-URL ï¿½ Project Brain
 
 ## Project Goal
 Build a browser-based device information and privacy testing tool that shows what information a website can obtain from the user's browser/device.
@@ -31,11 +31,11 @@ Build a browser-based device information and privacy testing tool that shows wha
 Not implemented yet.
 
 Planned:
-- `index.html` — application structure
-- `style.css` — UI/styling
-- `script.js` — browser/device information collection
-- `brain.md` — persistent project context
-- `README.md` — project documentation
+- `index.html` ï¿½ application structure
+- `style.css` ï¿½ UI/styling
+- `script.js` ï¿½ browser/device information collection
+- `brain.md` ï¿½ persistent project context
+- `README.md` ï¿½ project documentation
 
 ## Changes
 ### 2026-08-11
@@ -70,4 +70,44 @@ Planned:
 - Commit initial implementation.
 
 ## Commit History
-- Initial project context setup — 2026-08-11
+- Initial project context setup ï¿½ 2026-08-11
+
+## Test Results â€” Initial Prototype
+### 2026-08-11
+
+The initial prototype was tested inside the VS Code integrated browser environment.
+
+### Working Features
+- Platform detection
+- Device memory detection
+- Logical CPU core detection
+- Browser detection
+- User-Agent detection
+- Language and timezone detection
+- Screen and viewport detection
+- Device pixel ratio
+- Color/pixel depth
+- Network Information API where supported
+- Battery Status API where supported
+- WebGL detection
+- Geolocation API availability
+- Camera/microphone API availability
+- Clipboard API availability
+
+### Problems Found
+1. Device detection incorrectly classified the desktop environment as a tablet because it relied on viewport width.
+2. The User-Agent showed `Code/... Electron/...`, confirming that the test was running inside VS Code's Electron environment.
+3. Timezone was reported as `Asia/Calcutta`, which should be normalized to `Asia/Kolkata` for display.
+4. Network values such as `3g`, `0.45 Mbps`, and `500 ms` are browser-provided estimates rather than actual measured network performance.
+5. Permission/API availability was mixed with general browser information and needs a dedicated section.
+6. The raw User-Agent is difficult to read and should be presented separately from the interpreted browser information.
+
+### Planned Solutions
+1. Replace viewport-only device detection with User-Agent/platform-based detection and use viewport dimensions only as a secondary signal.
+2. Detect Chromium/Electron environments separately from regular Chrome.
+3. Normalize known timezone aliases for user-facing display.
+4. Label Network Information API values as browser-reported estimates.
+5. Add a dedicated Permissions section.
+6. Add a Browser Environment section and keep raw User-Agent as an expandable/raw value.
+7. Add a fingerprint-signal section with clear privacy explanations.
+8. Add a manual Rescan action.
